@@ -1,0 +1,148 @@
+#include "calculadoraPosfixa.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <math.h>
+#include <string.h>
+
+void inicializar(Pilha *pilha) {
+    pilha->topo = NULL;
+}
+void empilhar(Pilha *pilha, double valor) {
+    No *novoNo = (No *)malloc(sizeof(No));
+    if (novoNo == NULL) {
+        printf("Erro: Falha na alocação de memória\n");
+        exit(EXIT_FAILURE);
+    }
+    novoNo->dado = valor;
+    novoNo->proximo = pilha->topo;
+    pilha->topo = novoNo;
+}
+
+double desempilhar(Pilha *pilha) {
+    if (pilha->topo == NULL) {
+        printf("Erro: Pilha vazia\n");
+        exit(EXIT_FAILURE);
+    }
+    No *temp = pilha->topo;
+    double valor = temp->dado;
+    pilha->topo = temp->proximo;
+    free(temp);
+    return valor;
+}
+
+int ehoperador(char c) {
+    return (c == '+' || c == '-' || c == '*' || c == '/' || c == '^');
+}
+
+double avaliarExpressaoPosfixada(const char *expressao) {
+    Pilha pilha;
+    inicializar(&pilha);
+
+    for (int i = 0; expressao[i] != '\0'; ++i) {
+        if (isdigit(expressao[i]) || expressao[i] == '.') {
+            char buffer[64];
+            int j = 0;
+            while (isdigit(expressao[i]) || expressao[i] == '.') {
+                buffer[j++] = expressao[i++];
+            }
+            buffer[j] = '\0';
+            double valor = atof(buffer);
+            empilhar(&pilha, valor);
+            --i;
+        } else if (expressao[i] == ' ' || expressao[i] == '\t') {
+            continue;
+        } else if (isOperator(expressao[i])) {
+            double operando1, operando2 = 0;
+            double resultado = 0;
+
+            if (pilha.topo != NULL) operando2 = desempilhar(&pilha);
+            if (pilha.topo != NULL) operando1 = desempilhar(&pilha);
+
+            switch (expressao[i]) {
+                case '+': resultado = operando1 + operando2; break;
+                case '-': resultado = operando1 - operando2; break;
+                case '*': resultado = operando1 * operando2; break;
+                case '/': resultado = operando1 / operando2; break;
+                case '^': resultado = pow(operando1, operando2); break;
+            }
+
+            empilhar(&pilha, resultado);
+        }
+    }
+
+    return desempilhar(&pilha);
+}
+
+void inicializarString(PilhaString *pilha) {
+    pilha->topo = NULL;
+}
+
+void empilharString(PilhaString *pilha, const char *valor) {
+    NoString *novoNo = (NoString *)malloc(sizeof(NoString));
+    if (novoNo == NULL) {
+        printf("Erro: Falha na alocação de memória\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(novoNo->dado, valor);
+    novoNo->proximo = pilha->topo;
+    pilha->topo = novoNo;
+}
+
+char* desempilharString(PilhaString *pilha) {
+    if (pilha->topo == NULL) {
+        printf("Erro: Pilha vazia\n");
+        exit(EXIT_FAILURE);
+    }
+    NoString *temp = pilha->topo;
+    char *valor = strdup(temp->dado);
+    pilha->topo = temp->proximo;
+    free(temp);
+    return valor;
+}
+
+char* converterParaInfixa(const char *expressaoPosfixada) {
+    PilhaString pilha;
+    inicializarString(&pilha);
+
+    for (int i = 0; expressaoPosfixada[i] != '\0'; ++i) {
+        if (isdigit(expressaoPosfixada[i]) || expressaoPosfixada[i] == '.') {
+            char buffer[64];
+            int j = 0;
+            while (isdigit(expressaoPosfixada[i]) || expressaoPosfixada[i] == '.') {
+                buffer[j++] = expressaoPosfixada[i++];
+            }
+            buffer[j] = '\0';
+            empilharString(&pilha, buffer);
+            --i;
+        } else if (expressaoPosfixada[i] == ' ' || expressaoPosfixada[i] == '\t') {
+            continue;
+        } else if (ehoperador(expressaoPosfixada[i])) {
+            char *operando2 = desempilharString(&pilha);
+            char *operando1 = desempilharString(&pilha);
+
+            char buffer[256];
+            sprintf(buffer, "(%s %c %s)", operando1, expressaoPosfixada[i], operando2);
+            empilharString(&pilha, buffer);
+
+            free(operando1);
+            free(operando2);
+        }
+    }
+
+    return desempilharString(&pilha);
+}
+
+int main() {
+    const char *expressaoPosfixada = "3 4 2 * 1 5 - 2 3 ^ ^ / +";
+    char *expressaoInfixa = converterParaInfixa(expressaoPosfixada);
+    double resultado = avaliarExpressaoPosfixada(expressaoPosfixada);
+    
+    printf("Expressao pos-fixada: %s\n", expressaoPosfixada);
+    printf("Expressao infixa: %s\n", expressaoInfixa);
+    printf("Resultado: %.8f\n", resultado);
+
+    free(expressaoInfixa);
+    return 0;
+}
+
